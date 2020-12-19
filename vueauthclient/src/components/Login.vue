@@ -60,9 +60,6 @@ export default {
           console.log('Cannot log in')
         })
     }
-  },
-  mounted () {
-    console.log(1232)
   }
 }
 </script>

@@ -1,28 +1,29 @@
 <template>
-  <div id="app">
-    <img src="./assets/logo.png">
-    <div>
-      <router-link :to="{ name: 'Dashboard'}">Dashboard</router-link>
-      <router-link :to="{ name: 'Login'}">Login</router-link>
-      <!-- <a href="#" v-on:click="logout">Logout</a> -->
+  <div id="app" class="bg-gray-100 font-sans">
+    <Navigation></Navigation>
+    <Header></Header>
+    <div class="container mx-auto">
+      <router-view/>
     </div>
-    <router-view/>
   </div>
 </template>
 
 <script>
+import Navigation from './components/Navigation'
+import Header from './components/Header'
 export default {
-  name: 'App'
+  name: 'App',
+  components: {
+    Header, Navigation
+  }
 }
 </script>
 
 <style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body{
+  margin: 0;
 }
 </style>
