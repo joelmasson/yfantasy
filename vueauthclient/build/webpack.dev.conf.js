@@ -39,7 +39,15 @@ const devWebpackConfig = merge(baseWebpackConfig, {
       ? { warnings: false, errors: true }
       : false,
     publicPath: config.dev.assetsPublicPath,
-    proxy: config.dev.proxyTable,
+    proxy: { 
+      '/api': { 
+        target: 'https://12cd6cedefde.ngrok.io/',
+        pathRewrite: { "/api/": "/api/" },
+        secure: false,
+        changeOrigin: true,
+        logLevel: "debug",
+      } 
+    },
     quiet: true, // necessary for FriendlyErrorsPlugin
     watchOptions: {
       poll: config.dev.poll

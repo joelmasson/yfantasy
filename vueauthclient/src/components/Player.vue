@@ -25,7 +25,8 @@ export default {
     playerStats: function () {
       if (this.allCategories) {
         let stats = []
-        this.stats.forEach(category => {
+        console.log(this.stats)
+        this.stats.stats.forEach(category => {
           let sat = this.player.stats.stats.some(stat => {
             if (parseInt(category.stat_id) === parseInt(stat.stat_id)) {
               stats.push(stat)
@@ -39,7 +40,7 @@ export default {
         return stats
       } else {
         let categories = []
-        this.stats.forEach(stat => {
+        this.stats.stats.forEach(stat => {
           if (stat.position_type === this.player.position_type) {
             categories.push(stat.stat_id)
           }
