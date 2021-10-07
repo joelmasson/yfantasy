@@ -32,22 +32,28 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     hot: true,
     contentBase: false, // since we use CopyWebpackPlugin.
     compress: true,
+    disableHostCheck: true,
     host: HOST || config.dev.host,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+      "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+    },
     port: PORT || config.dev.port,
     open: config.dev.autoOpenBrowser,
     overlay: config.dev.errorOverlay
       ? { warnings: false, errors: true }
       : false,
     publicPath: config.dev.assetsPublicPath,
-    proxy: { 
-      '/api': { 
-        target: 'https://12cd6cedefde.ngrok.io/',
-        pathRewrite: { "/api/": "/api/" },
-        secure: false,
-        changeOrigin: true,
-        logLevel: "debug",
-      } 
+    public: 'https://96b6-2607-fea8-92e2-fe00-a5df-810a-9689-5550.ngrok.io',
+    proxy: {
+      '*': {
+          target: 'http://localhost:3000',
+          secure: false,
+          changeOrigin: true
+      }
     },
+    https: false,
     quiet: true, // necessary for FriendlyErrorsPlugin
     watchOptions: {
       poll: config.dev.poll

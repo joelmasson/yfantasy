@@ -1,6 +1,6 @@
 <template>
     <div>
-      <router-link :to="{ name: 'Team', params: { game_id: $route.params.game_id, league_id: $route.params.league_id, team_id:team.team_id }}">
+      <router-link :to="{ name: 'Team', params: { game_id: $route.params.game_id, league_id: $route.params.league_id, team_id:team.team_id, week_num:settings.current_week }}">
         <div class="flex items-center">
           <div class="flex-shrink-0 h-10 w-10">
             <img class="h-10 w-10 rounded-full" :src="logo" :alt="team.name">
@@ -27,20 +27,6 @@ export default {
   computed: {
     logo: function () {
       return this.team.team_logos[0].url
-    }
-  },
-  methods: {
-    addPLayer: function () {
-
-    },
-    dropPLayer: function () {
-
-    },
-    tradePLayer: function () {
-
-    },
-    comparePLayer: function () {
-
     }
   }
 }

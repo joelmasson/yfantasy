@@ -7,13 +7,13 @@
       <option value="W">Waivers</option>
       <option value="T">Taken</option>
       <option value="K">Keepers</option>
-      <option v-for="team in teams" :key="team.team_id" :value="team.team_id">{{team.name}}</option>
-      <option v-for="team in proTeams" :key="team.team_id" :value="team.team_id">{{team.team_name}}</option>
+      <option v-for="team in teams" :key="'team_'+team.team_id" :value="team.team_id">{{team.name}}</option>
+      <option v-for="team in proTeams" :key="'proTeam_'+team.team_id" :value="team.team_id">{{team.team_name}}</option>
     </select>
     <label for="filter-position">Position</label>
     <select name="filter-position" id="filter-position" v-model="positionFilter">
       <option value="P">All Forwards / Defencemen</option>
-      <option v-for="(position, i) in positions" :key="i" :value="position.position">{{position.position}}</option>
+      <option v-for="(position, i) in positions" :key="'p_'+i" :value="position.position">{{position.position}}</option>
     </select>
     <label for="filter-stats">Stats</label>
     <select

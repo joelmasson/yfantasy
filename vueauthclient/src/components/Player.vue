@@ -20,36 +20,45 @@ export default {
   components: {
     Profile
   },
-  props: ['player', 'team', 'allCategories', 'stats'],
+  data () {
+    return {
+      stats: this.player.stats.stats
+    }
+  },
+  props: ['player', 'team', 'allCategories'],
   computed: {
     playerStats: function () {
       if (this.allCategories) {
         let stats = []
-        console.log(this.stats)
-        this.stats.stats.forEach(category => {
-          let sat = this.player.stats.stats.some(stat => {
-            if (parseInt(category.stat_id) === parseInt(stat.stat_id)) {
-              stats.push(stat)
-              return stat
-            }
-          })
-          if (!sat) {
-            stats.push({value: '-'})
-          }
-        })
+        // this.player.stats.forEach(category => {
+        //   let sat = this.player.stats.stats.some(stat => {
+        //     if (parseInt(category.stat_id) === parseInt(stat.stat_id)) {
+        //       stats.push(stat)
+        //       return stat
+        //     }
+        //   })
+        //   if (!sat) {
+        //     stats.push({value: '-'})
+        //   }
+        // })
         return stats
       } else {
-        let categories = []
-        this.stats.stats.forEach(stat => {
+        let categories = this.$store.state.categories.filter(stat => {
           if (stat.position_type === this.player.position_type) {
-            categories.push(stat.stat_id)
-          }
-        })
-        return this.player.stats.stats.filter(stat => {
-          if (categories.includes(parseInt(stat.stat_id))) {
             return stat
           }
+        }).map(category => {
+          let value = this.player.projected.filter(stat => {
+            if (stat.stat_id === String(category.stat_id)) {
+              return stat
+            }
+          })[0]
+          if (value !== undefined) {
+            category.value = value.value
+          }
+          return category
         })
+        return categories
       }
     }
   },

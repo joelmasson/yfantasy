@@ -7,6 +7,7 @@ import Game from '@/components/Game'
 import Team from '@/components/Team'
 import Players from '@/components/Players'
 import PlayerPage from '@/components/PlayerPage'
+import Matchup from '@/components/Matchup'
 
 Vue.use(Router)
 
@@ -28,7 +29,7 @@ export default new Router({
       component: League
     },
     {
-      path: '/game/:game_id/league/:league_id/team/:team_id',
+      path: '/game/:game_id/league/:league_id/team/:team_id/week/:week_num',
       name: 'Team',
       component: Team
     },
@@ -41,6 +42,11 @@ export default new Router({
       path: '/game/:game_id/player/:player_id',
       name: 'Player',
       component: PlayerPage
+    },
+    {
+      path: '/game/:game_id/league/:league_id/week/:week_num/matchup/:matchup',
+      name: 'Matchup',
+      component: Matchup
     }
   ]
 })

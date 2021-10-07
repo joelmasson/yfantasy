@@ -38,7 +38,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
-                    <TeamProfile :team="team" :settings="standings.settings"></TeamProfile>
+                    <TeamProfile :team="team" :settings="standings"></TeamProfile>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -78,12 +78,6 @@
 import TeamProfile from './TeamProfile'
 export default {
   name: 'Standings',
-  data () {
-    return {
-      teams: this.standings.standings,
-      settings: this.standings.settings
-    }
-  },
   props: ['standings'],
   components: {
     TeamProfile
