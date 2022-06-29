@@ -45,7 +45,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
       ? { warnings: false, errors: true }
       : false,
     publicPath: config.dev.assetsPublicPath,
-    public: 'https://325b-2607-fea8-92e1-d600-9110-b418-5b8b-7e28.ngrok.io',
+    public: 'https://7db2-50-101-154-36.ngrok.io',
     proxy: {
       '*': {
           target: 'http://localhost:3000',

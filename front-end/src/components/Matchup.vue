@@ -41,14 +41,15 @@ export default {
     getPlaybyPlays: function () {
       let self = this
       let end = new Date(self.weeklySchedule[self.weeklySchedule.length - 1].date)
-      end = new Date(end.setDate(end.getDate() + 2))
+      end = new Date(end.setDate(end.getDate() + 3))
       end = end.getFullYear() + '-' + [end.getMonth() + 1] + '-' + end.getDate()
+      // console.log(end)
       Axios.post('/api/playbyplay/', {
         action: 'internal',
         start: self.weeklySchedule[0].date,
         end: end
       }).then((response) => {
-        console.log('pbp', response)
+        console.log('pbp', response.data)
         self.playbyplays = response.data
         self.setGames()
       }).catch((error) => {
@@ -63,7 +64,7 @@ export default {
           self.proTeams = response.data
           let end = new Date(this.getMatch.week_end + 'T00:00:00.000-04:00')
           end = new Date(end.setDate(end.getDate() + 1))
-          let start = new Date(this.getMatch.week_start + 'T00:00:00.000-04:00')
+          let start = new Date(this.getMatch.week_start + 'T00:00:00.000-05:00')
           let dates = []
           let dateMove = new Date(start)
           let strDate = start
@@ -88,7 +89,6 @@ export default {
         })
     },
     setGames: function () {
-      console.log('setGames')
       let schedule = this.weeklySchedule.map(day => {
         day.games = this.playbyplays.filter(game => {
           let gameDay = new Date(game.timestamp)
@@ -114,7 +114,6 @@ export default {
       this.schedule = schedule
     },
     updateFilter: function (value) {
-      console.log(value)
       this.chosenStat = value
     }
   },

@@ -1,9 +1,9 @@
 <template>
 <div class="bg-white shadow-md rounded-lg">
-    <MatchupProjectionWeek v-if="settings !== undefined" :settings="settings" :team="team" :players="players"></MatchupProjectionWeek>
+    <MatchupProjectionWeek v-if="settings !== undefined" :settings="settings" :team="team" :players="players" :schedule="games"></MatchupProjectionWeek>
     <div class="flex justify-start md:justify-center overflow-x-scroll mx-auto py-4 px-2 ">
         <div class="w-36"></div>
-        <div class="flex group  rounded-lg mx-1 transition-all duration-300 cursor-pointer justify-center w-16" v-bind:class="{'bg-purple-600 shadow-lg dark-shadow':day.today, 'hover:bg-purple-500 hover:shadow-lg hover-dark-shadow':!day.today}" v-for="(day, i) in games" :key="i">
+        <div class="flex group  rounded-lg mx-1 transition-all duration-300 cursor-pointer justify-center w-20" v-bind:class="{'bg-purple-600 shadow-lg dark-shadow':day.today, 'hover:bg-purple-500 hover:shadow-lg hover-dark-shadow':!day.today}" v-for="(day, i) in games" :key="i">
             <span v-if="today" class="flex h-3 w-3 absolute -top-1 -right-1">
                 <span class="animate-ping absolute group-hover:opacity-75 opacity-0 inline-flex h-full w-full rounded-full bg-purple-400 "></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-purple-100"></span>
@@ -13,14 +13,14 @@
                     <p class=" text-gray-900 group-hover:text-gray-100 text-sm transition-all duration-300">
                     {{day.DOW}}
                     </p>
-                    <p class=" text-gray-900 group-hover:text-gray-100 mt-3 group-hover:font-bold transition-all duration-300 " >
+                    <p class=" text-gray-900 group-hover:text-gray-100 mt-3 group-hover:font-bold transition-all duration-300">
                     {{day.Num}}
                     </p>
                 </div>
             </div>
         </div>
     </div>
-    <MatchupPlayer v-for="player in playerGames" :key="player.nhl_player_id" :player="player" :games="games" :chosenStat="chosenStat"></MatchupPlayer>
+    <MatchupPlayer v-for="player in playerGames" :key="player.player.nhl_player_id" :player="player" :chosenStat="chosenStat"></MatchupPlayer>
 </div>
 </template>
 <script>
@@ -40,39 +40,71 @@ export default {
       fullPlayers: [],
       availableSpots: [],
       availableTeams: [],
-      replacements: []
+      replacements: [],
+      playerGames: [],
+      NHLSchedule: [],
+      NHLStandings: []
     }
   },
   props: ['games', 'chosenStat', 'team_id', 'teams', 'settings'],
   methods: {
     getRoster: function () {
+      /* -----
+        Get all roster players and the days where they are starting from Yahoo
+      ---- */
+      let gameIndex = 0
+      let games = this.$props.games
       let self = this
-      Axios.post('/api/yahoo/teams/fetch', {
-        team_key: [
-          self.$route.params.game_id + '.l.' + self.$route.params.league_id + '.t.' + self.team_id
-        ],
-        subresources: ['roster', 'matchups']
-      }).then((response) => {
-        console.log('getRoster', response.data)
-        self.team = response.data[0]
-        self.fullPlayers = self.players.map(player => {
-          let yPlayer = self.team.roster.filter(yPlayer => {
-            if (player.name === yPlayer.name.full) {
-              return yPlayer
-            }
-          })[0]
-          player.display_position = yPlayer.display_position
-          player.headshot = 'https://' + yPlayer.headshot.url.split('https://')[2]
-          player.eligible_positions = yPlayer.eligible_positions.toString()
-          player.editorial_team_abbr = yPlayer.editorial_team_abbr
-          return player
+      function getData () {
+        Axios.post('/api/yahoo/roster/players', {
+          team_key: self.$route.params.game_id + '.l.' + self.$route.params.league_id + '.t.' + self.team_id,
+          date: games[gameIndex].date
+        }).then((response) => {
+          let roster = response.data.roster
+          if (gameIndex === 0) {
+            self.team = roster
+            self.fullPlayers = self.players.map(player => {
+              let yPlayer = roster.filter(yPlayer => {
+                if (player.name === yPlayer.name.full) {
+                  return yPlayer
+                }
+              })[0]
+              player.player_id = yPlayer.player_id
+              player.display_position = yPlayer.display_position
+              player.headshot = 'https://' + yPlayer.headshot.url.split('https://')[2]
+              player.eligible_positions = yPlayer.eligible_positions.toString()
+              player.editorial_team_abbr = yPlayer.editorial_team_abbr
+              player.selected_position = yPlayer.selected_position
+              player.rostered = []
+              return player
+            })
+          }
+          self.fullPlayers.forEach(fullPlayer => {
+            let rosterPlayer = roster.filter(player => {
+              if (fullPlayer.player_id === player.player_id) {
+                return player
+              }
+            })[0]
+            fullPlayer.rostered.push({position: rosterPlayer.selected_position, date: games[gameIndex].date, opponentSOS: null})
+          })
+          gameIndex++
+          if (gameIndex >= games.length) {
+            self.setPlayerGames()
+            self.findAvailableSpots()
+            self.$forceUpdate()
+          } else if (games[gameIndex] !== undefined) {
+            getData()
+          }
+        }).catch((error) => {
+          console.log(error)
         })
-        this.$forceUpdate()
-      }).catch((error) => {
-        console.log('error', error)
-      })
+      }
+      getData()
     },
-    getPlayers: function (names) {
+    getPlayers: function (query) {
+      /* -----
+        Get all roster players and thier stats
+      ---- */
       function compare (a, b) {
         if (a.coverage_value < b.coverage_value) {
           return -1
@@ -84,8 +116,7 @@ export default {
       }
       let self = this
       Axios.post('/api/players', {
-        queryBy: 'fantasyTeamId',
-        value: [self.$route.params.game_id + '.l.' + self.$route.params.league_id + '.t.' + self.$props.team_id]
+        query: query
       }).then(response => {
         self.players = response.data.map(player => {
           let playbyplayGames = player.stats.filter(game => {
@@ -95,30 +126,19 @@ export default {
             }
           }).sort(compare)
           player.projectedStats = {}
-          Object.keys(playbyplayGames[0].stats).forEach(stat => {
-            let last = playbyplayGames[0] === undefined ? 0 : (playbyplayGames[0].stats[stat])
-            let two = playbyplayGames[1] === undefined ? 0 : (playbyplayGames[1].stats[stat])
-            let three = playbyplayGames[2] === undefined ? 0 : (playbyplayGames[2].stats[stat])
-            if (stat === 'SAVE_PERCENTAGE') {
-              console.log(last, two, three)
-            }
-            player.projectedStats[stat] = ((5 * last + 4 * two + 3 * three) / (5 + 4 + 3))
-          })
+          if (playbyplayGames.length >= 1) {
+            Object.keys(playbyplayGames[0].stats).forEach(stat => {
+              let last = playbyplayGames[0] === undefined ? 0 : (playbyplayGames[0].stats[stat])
+              let two = playbyplayGames[1] === undefined ? 0 : (playbyplayGames[1].stats[stat])
+              let three = playbyplayGames[2] === undefined ? 0 : (playbyplayGames[2].stats[stat])
+              player.projectedStats[stat] = ((5 * last + 4 * two + 3 * three) / (5 + 4 + 3))
+            })
+          }
           return player
         })
         self.getRoster()
-        self.findAvailableSpots()
       })
     },
-    // NEXT STEPS
-    // Calculate the number of open spots per day
-    // 1C, 2RW, 1D ... on monday, 1C, 2RW, 1D ... on tuesday
-    // find teams that have games in those days
-    // NYR, MTL on monday, FLA, TOR on Tuesday
-    // Find the teams that match the number of open spots best
-    // FLA, TOR, MTL ...
-    // return top players in those spots
-    // C -thornton...
     findAvailableSpots: function () {
       // let gamesByTeam = []
       function compare (a, b) {
@@ -141,8 +161,7 @@ export default {
             {position: 'LW', count: 2},
             {position: 'RW', count: 2},
             {position: 'D', count: 4},
-            {position: 'Util', count: 1},
-            {position: 'G', count: 2}
+            {position: 'Util', count: 1}
           ],
           games: date.games,
           totalOpenSpots: 0,
@@ -152,17 +171,17 @@ export default {
         this.players.forEach(player => {
           if (player.selected_position !== '' || player.selected_position !== 'IR+') {
             let isPlayerInGame = date.games.filter(game => {
-              if (game.away.name === player.editorial_team_full_name || game.home.name === player.editorial_team_full_name) {
+              if (game.awayId === player.currentTeamId || game.homeId === player.currentTeamId) {
                 return game
               }
             })
             if (isPlayerInGame.length > 0) {
-              let position = player.display_position.split(',')
-              if (player.position_type === 'P') {
-                position.push('Util')
-              }
+              // let position = player.display_position.split(',')
+              // if (player.position_type === 'P') {
+              //   position.push('Util')
+              // }
               for (let index = 0; index < gameDays[i].roster_positions.length; index++) {
-                if (position.includes(gameDays[i].roster_positions[index].position) && gameDays[i].roster_positions[index].count > 0) {
+                if (player.selected_position === gameDays[i].roster_positions[index].position && gameDays[i].roster_positions[index].count > 0) {
                   gameDays[i].roster_positions[index].count -= 1
                   break
                 }
@@ -194,17 +213,17 @@ export default {
                 }
               }
             } else {
-              availableTeams.push({id: team, count: 1})
+              availableTeams.push({id: team, count: 1, gameDays: {}})
             }
           })
         }
       })
       this.availableTeams = availableTeams.sort(compare)
-      console.log('availableTeams', availableTeams)
       this.getTeamPlayers()
     },
     getTeamPlayers: function () {
       let maxGames = this.availableTeams[0].count
+      // return the team/s with the highest number of games
       let teamsToQuery = this.availableTeams.filter(team => {
         if (team.count === maxGames) {
           return team
@@ -212,9 +231,10 @@ export default {
       }).map(team => {
         return parseInt(team.id)
       })
-      console.log(teamsToQuery)
       Axios.post('api/players', {
-        teams: teamsToQuery
+        query: {'fantasyTeamId': null, 'currentTeamId': {'$in': teamsToQuery}},
+        limit: 20,
+        sort: {'stats.stats.GAME_SCORE': -1}
       }).then(response => {
         console.log(response)
       })
@@ -236,15 +256,56 @@ export default {
         }
       }).sort(compare)
       return (5 * parseInt(playbyplayGames[0].stats[this.chosenStat]) + 4 * parseInt(playbyplayGames[1].stats[this.chosenStat]) + 3 * parseInt(playbyplayGames[2].stats[this.chosenStat])) / (5 + 4 + 3)
-    }
-  },
-  computed: {
-    today: function () {
-      let today = new Date()
-      return today.toISOString().split('T')[0]
     },
-    playerGames: function () {
-      return this.players.map(player => {
+    gameSOS: function (opponent) {
+      // Get Opponent's Schedule
+      let opponentSchedule = this.NHLSchedule.filter(game => {
+        if (game.teams.home.team.id === opponent) {
+          return game
+        } else if (game.teams.away.team.id === opponent) {
+          return game
+        }
+      })
+      // Get Opponent's Opponents Record
+      let allOpponents = opponentSchedule.map(game => {
+        if (game.teams.home.team.id === opponent) {
+          return game.teams.away.team.id
+        } else if (game.teams.away.team.id === opponent) {
+          return game.teams.home.team.id
+        }
+      })
+      let OOR = this.NHLStandings.filter(team => {
+        if (allOpponents.includes(team.team.id)) {
+          return team
+        }
+      }).map(team => {
+        return team.pointsPercentage
+      }).reduce(function (a, b) {
+        return a + b
+      })
+      let opponentRecord = this.NHLStandings.filter(team => {
+        if (opponent === team.team.id) {
+          return team
+        }
+      }).map(team => {
+        return team.pointsPercentage
+      })
+      return ((2 * (opponentRecord)) + (OOR / allOpponents.length)) / 3
+    },
+    setPlayerGames: function () {
+      let roster = this.$store.state.positions.map(spot => {
+        let spots = []
+        let rosterSpotObj = {
+          position: spot.position,
+          player: {}
+        }
+        for (let index = 0; index < parseInt(spot.count); index++) {
+          spots.push(rosterSpotObj)
+        }
+        return spots
+      }).flat()
+      let players = this.players.map(player => {
+        player.set = false
         player.games = this.games.map(date => {
           let gameObject = {
             displayedStat: null,
@@ -258,11 +319,15 @@ export default {
             }
           })
           if (isPlayerInGame.length > 0) {
+            let opponent
             if (isPlayerInGame[0].homeId === player.currentTeamId) {
               gameObject.matchup = isPlayerInGame[0].away.name_abbv
+              opponent = isPlayerInGame[0].awayId
             } else if (isPlayerInGame[0].awayId === player.currentTeamId) {
               gameObject.matchup = '@' + isPlayerInGame[0].home.name_abbv
+              opponent = isPlayerInGame[0].homeId
             }
+            gameObject.sos = this.gameSOS(opponent)
             if (isPlayerInGame[0].events.length > 0) { // GAME HAS BEEN PLAYED
               let gameStats = player.stats.filter(game => {
                 if (game.coverage_value === isPlayerInGame[0].gamePk) {
@@ -297,10 +362,61 @@ export default {
         })
         return player
       })
+      let setRoster = []
+      roster.forEach(spot => {
+        players.forEach(player => {
+          if (spot.position === player.selected_position && !player.set) {
+            player.set = true
+            let rosterSpotObj = {
+              position: spot.position,
+              player: player
+            }
+            setRoster.push(rosterSpotObj)
+          }
+        })
+      })
+      this.playerGames = setRoster
+      this.setRosterSOS()
+    },
+    // setRosterSOS: function () {
+    //   this.fullPlayers.forEach(player => {
+    //     player.rostered.forEach((date, i) => {
+    //       date.opponentSOS = this.games[i].sos
+    //     })
+    //   })
+    //   this.$forceUpdate()
+    // },
+    getNHLSchedule: function () {
+      let self = this
+      Axios.get('https://statsapi.web.nhl.com/api/v1/schedule?startDate=' + this.$store.state.league.start_date + '&endDate=' + this.today).then((response) => {
+        self.NHLSchedule = response.data.dates.flatMap(date => {
+          return date.games
+        })
+      }).catch((error) => {
+        console.log('error', error)
+      })
+    },
+    getNHLStandings: function () {
+      let self = this
+      Axios.get('https://statsapi.web.nhl.com/api/v1/standings').then((response) => {
+        self.NHLStandings = response.data.records.flatMap(date => {
+          return date.teamRecords
+        })
+      }).catch((error) => {
+        console.log('error', error)
+      })
+    }
+  },
+  computed: {
+    today: function () {
+      let today = new Date()
+      return today.toISOString().split('T')[0]
     }
   },
   mounted () {
-    this.getPlayers()
+    this.getPlayers({'fantasyTeamId': this.$route.params.game_id + '.l.' + this.$route.params.league_id + '.t.' + this.$props.team_id})
+    this.getNHLSchedule()
+    this.getNHLStandings()
   }
 }
 </script>
