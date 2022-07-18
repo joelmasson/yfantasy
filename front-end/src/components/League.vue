@@ -1,7 +1,7 @@
 <template>
   <div>
       <Standings :standings='league'></Standings>
-      <Matchups :matchups='league.scoreboard.matchups' :standings='league'></Matchups>
+      <Matchups :matchups='matchups' :standings='league' @selectedWeek="updateSelectedWeek"></Matchups>
     </div>
 </template>
 <script>
@@ -30,7 +30,9 @@ export default {
       scrapedSeason: {},
       proData: {},
       playByPlayData: [],
-      dates: []
+      dates: [],
+      currentWeek: 1,
+      matchups: []
     }
   },
   components: {
@@ -76,6 +78,8 @@ export default {
           console.log(response)
           if (!('error' in response)) {
             self.league = response.data[0]
+            // self.matchups = response.data[0].scoreboard.matchups
+            self.updateSelectedWeek(response.data[0].current_week)
             self.getPastLeaugeKeys()
             self.updateStore()
             self.getCurrentSeason()
@@ -118,7 +122,9 @@ export default {
                   return date.date
                 }
               })
-              self.getExtenalPlayByPlay(self.dates[0].date, self.dates[0].date)
+              if (self.dates.length > 0) {
+                self.getExtenalPlayByPlay(self.dates[0].date, self.dates[0].date)
+              }
             }
           }
         }).catch((error) => {
@@ -247,6 +253,19 @@ export default {
         this.setFantasyOwnership(players)
       })
     },
+    getMatchups: function (week) {
+      let self = this
+      console.log(this.$route.params.game_id + '.l.' + this.$route.params.league_id, week)
+      Axios.post('api/yahoo/league/scoreboard', {
+        league_key: this.$route.params.game_id + '.l.' + this.$route.params.league_id,
+        week: week
+      }).then(response => {
+        console.log('here')
+        self.matchups = response.data.scoreboard.matchups
+      }).catch((error) => {
+        console.log('error', error)
+      })
+    },
     setFantasyOwnership: function (players) {
       Axios.post('api/players', {
         action: 'updateOwnership',
@@ -254,6 +273,10 @@ export default {
       }).then(update => {
         console.log(update)
       })
+    },
+    updateSelectedWeek: function (value) {
+      this.currentWeek = value
+      this.getMatchups(value)
     }
   },
   mounted () {

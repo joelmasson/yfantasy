@@ -1,25 +1,6 @@
 <template>
 <div class="bg-white shadow-md rounded-lg">
-    <MatchupProjectionWeek v-if="settings !== undefined" :settings="settings" :team="team" :players="players" :schedule="games"></MatchupProjectionWeek>
-    <div class="flex justify-start md:justify-center overflow-x-scroll mx-auto py-4 px-2 ">
-        <div class="w-36"></div>
-        <div class="flex group  rounded-lg mx-1 transition-all duration-300 cursor-pointer justify-center w-20" v-bind:class="{'bg-purple-600 shadow-lg dark-shadow':day.today, 'hover:bg-purple-500 hover:shadow-lg hover-dark-shadow':!day.today}" v-for="(day, i) in games" :key="i">
-            <span v-if="today" class="flex h-3 w-3 absolute -top-1 -right-1">
-                <span class="animate-ping absolute group-hover:opacity-75 opacity-0 inline-flex h-full w-full rounded-full bg-purple-400 "></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-purple-100"></span>
-                </span>
-                <div class="flex items-center px-4 py-4">
-                <div class="text-center">
-                    <p class=" text-gray-900 group-hover:text-gray-100 text-sm transition-all duration-300">
-                    {{day.DOW}}
-                    </p>
-                    <p class=" text-gray-900 group-hover:text-gray-100 mt-3 group-hover:font-bold transition-all duration-300">
-                    {{day.Num}}
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- <MatchupProjectionWeek v-if="settings !== undefined" :settings="settings" :team="team" :players="players" :schedule="games"></MatchupProjectionWeek> -->
     <MatchupPlayer v-for="player in playerGames" :key="player.player.nhl_player_id" :player="player" :chosenStat="chosenStat"></MatchupPlayer>
 </div>
 </template>
@@ -52,49 +33,40 @@ export default {
       /* -----
         Get all roster players and the days where they are starting from Yahoo
       ---- */
-      let gameIndex = 0
-      let games = this.$props.games
       let self = this
       function getData () {
         Axios.post('/api/yahoo/roster/players', {
           team_key: self.$route.params.game_id + '.l.' + self.$route.params.league_id + '.t.' + self.team_id,
-          date: games[gameIndex].date
+          date: self.$route.params.week_num
         }).then((response) => {
           let roster = response.data.roster
-          if (gameIndex === 0) {
-            self.team = roster
-            self.fullPlayers = self.players.map(player => {
-              let yPlayer = roster.filter(yPlayer => {
-                if (player.name === yPlayer.name.full) {
-                  return yPlayer
-                }
-              })[0]
-              player.player_id = yPlayer.player_id
-              player.display_position = yPlayer.display_position
-              player.headshot = 'https://' + yPlayer.headshot.url.split('https://')[2]
-              player.eligible_positions = yPlayer.eligible_positions.toString()
-              player.editorial_team_abbr = yPlayer.editorial_team_abbr
-              player.selected_position = yPlayer.selected_position
-              player.rostered = []
-              return player
-            })
-          }
+          self.team = roster
+          self.fullPlayers = self.players.map(player => {
+            let yPlayer = roster.filter(yPlayer => {
+              if (player.name === yPlayer.name.full) {
+                return yPlayer
+              }
+            })[0]
+            player.player_id = yPlayer.player_id
+            player.display_position = yPlayer.display_position
+            player.headshot = 'https://' + yPlayer.headshot.url.split('https://')[2]
+            player.eligible_positions = yPlayer.eligible_positions.toString()
+            player.editorial_team_abbr = yPlayer.editorial_team_abbr
+            player.selected_position = yPlayer.selected_position
+            player.rostered = []
+            return player
+          })
           self.fullPlayers.forEach(fullPlayer => {
             let rosterPlayer = roster.filter(player => {
               if (fullPlayer.player_id === player.player_id) {
                 return player
               }
             })[0]
-            fullPlayer.rostered.push({position: rosterPlayer.selected_position, date: games[gameIndex].date, opponentSOS: null})
+            fullPlayer.rostered.push({position: rosterPlayer.selected_position, date: self.$route.params.week_num, opponentSOS: null})
           })
-          gameIndex++
-          if (gameIndex >= games.length) {
-            self.setPlayerGames()
-            self.findAvailableSpots()
-            self.$forceUpdate()
-          } else if (games[gameIndex] !== undefined) {
-            getData()
-          }
+          // self.setPlayerGames()
+          //   self.findAvailableSpots()
+          //   self.$forceUpdate()
         }).catch((error) => {
           console.log(error)
         })
@@ -136,7 +108,7 @@ export default {
           }
           return player
         })
-        self.getRoster()
+        // self.getRoster()
       })
     },
     findAvailableSpots: function () {
@@ -293,17 +265,6 @@ export default {
       return ((2 * (opponentRecord)) + (OOR / allOpponents.length)) / 3
     },
     setPlayerGames: function () {
-      let roster = this.$store.state.positions.map(spot => {
-        let spots = []
-        let rosterSpotObj = {
-          position: spot.position,
-          player: {}
-        }
-        for (let index = 0; index < parseInt(spot.count); index++) {
-          spots.push(rosterSpotObj)
-        }
-        return spots
-      }).flat()
       let players = this.players.map(player => {
         player.set = false
         player.games = this.games.map(date => {
@@ -363,7 +324,7 @@ export default {
         return player
       })
       let setRoster = []
-      roster.forEach(spot => {
+      this.rosterSpots.forEach(spot => {
         players.forEach(player => {
           if (spot.position === player.selected_position && !player.set) {
             player.set = true
@@ -376,7 +337,7 @@ export default {
         })
       })
       this.playerGames = setRoster
-      this.setRosterSOS()
+      // this.setRosterSOS()
     },
     // setRosterSOS: function () {
     //   this.fullPlayers.forEach(player => {
@@ -411,6 +372,19 @@ export default {
     today: function () {
       let today = new Date()
       return today.toISOString().split('T')[0]
+    },
+    rosterSpots: function () {
+      return this.$store.state.positions.map(spot => {
+        let spots = []
+        let rosterSpotObj = {
+          position: spot.position,
+          player: {}
+        }
+        for (let index = 0; index < parseInt(spot.count); index++) {
+          spots.push(rosterSpotObj)
+        }
+        return spots
+      }).flat()
     }
   },
   mounted () {

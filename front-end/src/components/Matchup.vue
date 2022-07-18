@@ -2,10 +2,10 @@
 <template>
     <section>
         <!-- <MatchupHeader :matchup="getMatch" :settings="settings"></MatchupHeader> -->
-        <!-- <Calender :dates="gameDays"></Calender> -->
-        <SelectFilter :default="chosenStat" :label="'Sort by Stat'" :options="settings" @updateSelectFilter="updateFilter"></SelectFilter>
-        <MatchupTeam v-if="playbyplays.length > 0" :games="schedule" :chosenStat="chosenStat" :team_id="getMatch.teams[1].team_id" :teams="proTeams" :settings="settings"></MatchupTeam>
-        <p v-else>LOADING PLAY BY PLAY DATA...</p>
+        <Calender :dates="weeklySchedule"></Calender>
+        <!-- <SelectFilter :default="chosenStat" :label="'Sort by Stat'" :options="settings" @updateSelectFilter="updateFilter"></SelectFilter> -->
+        <!-- <MatchupTeam v-if="playbyplays.length > 0" :games="schedule" :chosenStat="chosenStat" :team_id="getMatch.teams[1].team_id" :teams="proTeams" :settings="settings"></MatchupTeam>
+        <p v-else>LOADING PLAY BY PLAY DATA...</p> -->
         <!-- <Team v-for="team in getMatch.teams" :key="team.team_id" :teamID="team.team_id" :projections="projections"></Team> -->
     </section>
 </template>
@@ -31,7 +31,6 @@ export default {
       defaultStat: this.$store.state.categories[0],
       chosenStat: 'GAME_SCORE',
       playbyplays: [],
-      potentialPlayers: [],
       proTeams: [],
       schedule: [],
       weeklySchedule: []
@@ -89,6 +88,7 @@ export default {
         })
     },
     setGames: function () {
+      console.log('here')
       let schedule = this.weeklySchedule.map(day => {
         day.games = this.playbyplays.filter(game => {
           let gameDay = new Date(game.timestamp)

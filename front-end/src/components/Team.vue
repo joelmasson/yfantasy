@@ -91,61 +91,75 @@ export default {
           console.log('error', error)
         })
     },
+    getTeamPlayers: function () {
+      let self = this
+      Axios.post('/api/yahoo/players/teams', {
+        team_key: self.game_id + '.l.' + self.league_id + '.t.' + self.team_id,
+        date: self.$route.params.week_num
+      })
+        .then((response) => {
+          self.team = response.data
+          response.data.roster.forEach(player => {
+            // self.getPlayerStats(player.player_key, self.$route.params.week_num)
+          })
+        })
+        .catch((error) => {
+          console.log('error', error)
+        })
+    },
     getPlayerStats: function (key, week) {
       let self = this
       Axios.post('/api/yahoo/player/stats', {
         player_key: key,
         week: week
-      })
-        .then((response) => {
-          let player = response.data
-          let weekProjected = []
-          let projectedStats = response.data.stats.stats
-          self.projections.forEach(dates => {
-            dates.forEach(player => {
-              if (response.data.name.full === player.Name) {
-                weekProjected.push(player)
-              }
-            })
+      }).then((response) => {
+        let player = response.data
+        let weekProjected = []
+        let projectedStats = response.data.stats.stats
+        self.projections.forEach(dates => {
+          dates.forEach(player => {
+            if (response.data.name.full === player.Name) {
+              weekProjected.push(player)
+            }
           })
-          weekProjected.forEach((day) => {
-            for (const stat in day) {
-              let formattedCategory = stat.replace('/', '')
-              if (self.$store.state.categories.some(category => {
-                if (category.name === formattedCategory) {
+        })
+        weekProjected.forEach((day) => {
+          for (const stat in day) {
+            let formattedCategory = stat.replace('/', '')
+            if (self.$store.state.categories.some(category => {
+              if (category.name === formattedCategory) {
+                return true
+              }
+            })) {
+              if (projectedStats.some(category => {
+                if (category.stat_id === 'p-' + stat) {
                   return true
                 }
               })) {
-                if (projectedStats.some(category => {
-                  if (category.stat_id === 'p-' + stat) {
-                    return true
+              } else {
+                let id = self.$store.state.categories.filter(category => {
+                  if (category.name === formattedCategory) {
+                    return category
                   }
-                })) {
-                } else {
-                  let id = self.$store.state.categories.filter(category => {
-                    if (category.name === formattedCategory) {
-                      return category
+                })[0]
+                let flag = projectedStats.find(stat => stat.stat_id === 'p-' + id.stat_id)
+                if (flag !== undefined) {
+                  projectedStats.find(projectedStat => {
+                    if (projectedStat.stat_id === 'p-' + id.stat_id) {
+                      projectedStat.value = projectedStat.value + day[stat]
                     }
-                  })[0]
-                  let flag = projectedStats.find(stat => stat.stat_id === 'p-' + id.stat_id)
-                  if (flag !== undefined) {
-                    projectedStats.find(projectedStat => {
-                      if (projectedStat.stat_id === 'p-' + id.stat_id) {
-                        projectedStat.value = projectedStat.value + day[stat]
-                      }
-                    })
-                  }
-                  projectedStats.push({'value': day[stat], 'stat_id': 'p-' + id.stat_id})
+                  })
                 }
+                projectedStats.push({'value': day[stat], 'stat_id': 'p-' + id.stat_id})
               }
             }
-          })
-          player.projected = projectedStats
-          self.players.push(player)
+          }
         })
-        .catch((error) => {
-          console.log(error)
-        })
+        player.projected = projectedStats
+        self.players.push(player)
+      }).catch((error) => {
+        console.log(error)
+      })
     },
     getProjections () {
       let self = this
@@ -216,7 +230,7 @@ export default {
   },
   mounted () {
     this.getRoster()
-    this.getProjections()
+    // this.getProjections()
     // this.getPlayerStats('403.p.4681', 16)
   }
 }
